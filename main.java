@@ -35,3 +35,24 @@ public static void main(String[] args) {
         System.out.println(car.getModel());
     }
 }
+public static Car[] getCarByBrendAndYearOperational(Car[] cars, String brand, int years) {
+    int currentYear = java.time.Year.now().getValue();
+    int count = 0;
+
+    for (Car car : cars) {
+        if (car.getBrand().equalsIgnoreCase(brand) && (currentYear - car.getYear()) > years) {
+            count++;
+        }
+    }
+
+    Car[] result = new Car[count];
+    int index = 0;
+
+    for (Car car : cars) {
+        if (car.getBrand().equalsIgnoreCase(brand) && (currentYear - car.getYear()) > years) {
+            result[index++] = car;
+        }
+    }
+
+    return result;
+}
