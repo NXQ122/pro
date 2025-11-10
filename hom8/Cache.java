@@ -30,4 +30,8 @@ public class Cache<T> {
         return list.isEmpty() ? null : list.getFirst();
     }
 
-   
+    public T getLast() {
+        return list.isEmpty() ? null : list.getLast();
+    }
+
+    
