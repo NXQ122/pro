@@ -12,7 +12,7 @@ public class main {
 
         System.out.println("Первый элемент: " + cache.getFirst());
         System.out.println("Последний элемент: " + cache.getLast());
-        System.out.println("Элемент с индексом 1: " + cache.getItemByIndex(1));
+        System.out.println("Элемент с индексом 7: " + cache.getItemByIndex(7));
 
         System.out.println("Есть ли элемент 'B'? " + cache.exists("B"));
         System.out.println("Удаляем 'B': " + cache.remove("B"));
