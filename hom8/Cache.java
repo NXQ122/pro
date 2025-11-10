@@ -34,4 +34,12 @@ public class Cache<T> {
         return list.isEmpty() ? null : list.getLast();
     }
 
-    
+    public T getItemByIndex(int i) {
+        return (i >= 0 && i < list.size()) ? list.get(i) : null;
+    }
+
+    @Override
+    public String toString() {
+        return list.toString();
+    }
+}
