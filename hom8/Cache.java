@@ -26,4 +26,8 @@ public class Cache<T> {
         return list.contains(item);
     }
 
+    public T getFirst() {
+        return list.isEmpty() ? null : list.getFirst();
+    }
+
    
