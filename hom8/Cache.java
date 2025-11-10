@@ -18,4 +18,7 @@ public class Cache<T> {
         list.addLast(item); // добавляем новый
     }
 
-   
+    public boolean remove(T item) {
+        return list.remove(item);
+    }
+
