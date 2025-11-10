@@ -22,3 +22,8 @@ public class Cache<T> {
         return list.remove(item);
     }
 
+    public boolean exists(T item) {
+        return list.contains(item);
+    }
+
+   
