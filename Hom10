@@ -1,0 +1,179 @@
+import java.io.*;
+import java.util.HashMap;
+import java.util.Map;
+
+public class ClassicIOCacheWithLimit {
+
+    private final Map<String, FileCacheEntry> cache;
+    private final int maxSize;
+
+    private static class FileCacheEntry {
+        String content;
+        long lastReadTime;
+        long lastModifiedTimeAtRead;
+
+        FileCacheEntry(String content, long lastReadTime, long lastModifiedTimeAtRead) {
+            this.content = content;
+            this.lastReadTime = lastReadTime;
+            this.lastModifiedTimeAtRead = lastModifiedTimeAtRead;
+        }
+    }
+
+    public ClassicIOCacheWithLimit(int maxSize) {
+        this.maxSize = maxSize;
+        this.cache = new HashMap<>();
+    }
+
+    public ClassicIOCacheWithLimit() {
+        this(100);
+    }
+
+    public String readFile(String filePath) throws IOException {
+        File file = new File(filePath);
+
+        if (!file.exists()) {
+            throw new FileNotFoundException("Файл не найден: " + filePath);
+        }
+
+        String absolute = file.getAbsolutePath();
+        long currentModifiedTime = file.lastModified();
+
+        FileCacheEntry entry = cache.get(absolute);
+
+        if (entry != null && isCacheValid(entry, currentModifiedTime)) {
+            entry.lastReadTime = System.currentTimeMillis();
+            return entry.content;
+        }
+
+        return updateCache(file, absolute, currentModifiedTime);
+    }
+
+    private boolean isCacheValid(FileCacheEntry entry, long currentModifiedTime) {
+        return entry.lastModifiedTimeAtRead == currentModifiedTime;
+    }
+
+    private String updateCache(File file, String absolutePath, long currentModifiedTime) throws IOException {
+        String content = readFileContent(file);
+        long now = System.currentTimeMillis();
+
+        if (cache.size() >= maxSize) {
+            removeLeastRecentlyUsed();
+        }
+
+        cache.put(absolutePath, new FileCacheEntry(content, now, currentModifiedTime));
+        return content;
+    }
+
+    private String readFileContent(File file) throws IOException {
+        StringBuilder sb = new StringBuilder();
+        try (BufferedReader br = new BufferedReader(new FileReader(file), 8192)) {
+            String line;
+            while ((line = br.readLine()) != null) {
+                sb.append(line).append(System.lineSeparator());
+            }
+        }
+        return sb.toString();
+    }
+
+    private void removeLeastRecentlyUsed() {
+        String oldestKey = null;
+        long oldestTime = Long.MAX_VALUE;
+
+        for (Map.Entry<String, FileCacheEntry> e : cache.entrySet()) {
+            if (e.getValue().lastReadTime < oldestTime) {
+                oldestTime = e.getValue().lastReadTime;
+                oldestKey = e.getKey();
+            }
+        }
+
+        if (oldestKey != null) {
+            cache.remove(oldestKey);
+        }
+    }
+
+    public void invalidate(String filePath) {
+        File file = new File(filePath);
+        cache.remove(file.getAbsolutePath());
+    }
+
+    public void invalidateAll() {
+        cache.clear();
+    }
+
+    public boolean isCached(String filePath) {
+        File file = new File(filePath);
+        return cache.containsKey(file.getAbsolutePath());
+    }
+
+    public int getCachedFilesCount() {
+        return cache.size();
+    }
+
+    public long getCacheSizeInMemory() {
+        long size = 0;
+        for (FileCacheEntry e : cache.values()) {
+            size += e.content.length() * 2L;
+        }
+        return size;
+    }
+
+    public void printCacheStats() {
+        System.out.println("=== Cache Stats ===");
+        System.out.println("Files in cache: " + getCachedFilesCount());
+        System.out.println("Cache memory size: " + getCacheSizeInMemory() + " bytes");
+        System.out.println("Cache max size: " + maxSize);
+        System.out.println("\nFiles:");
+        for (Map.Entry<String, FileCacheEntry> entry : cache.entrySet()) {
+            System.out.println("• " + entry.getKey() +
+                    " | size=" + entry.getValue().content.length() * 2 +
+                    " bytes | lastRead=" + entry.getValue().lastReadTime);
+        }
+        System.out.println("====================\n");
+    }
+
+    public static void main(String[] args) throws Exception {
+        ClassicIOCacheWithLimit cache = new ClassicIOCacheWithLimit(3);
+
+        String[] testFiles = {"a.txt", "b.txt", "c.txt", "d.txt"};
+
+        for (String name : testFiles) {
+            try (PrintWriter pw = new PrintWriter(name)) {
+                pw.println("Test content for " + name);
+            }
+        }
+
+        System.out.println("Первое чтение (диск):");
+        for (String name : testFiles) {
+            System.out.println(cache.readFile(name));
+        }
+
+        cache.printCacheStats();
+
+        System.out.println("Повторное чтение:");
+        for (String name : testFiles) {
+            try {
+                System.out.println(cache.readFile(name));
+            } catch (IOException e) {
+                System.out.println("Файл вытеснен: " + name);
+            }
+        }
+
+        cache.printCacheStats();
+
+        Thread.sleep(1000);
+        try (PrintWriter pw = new PrintWriter("a.txt")) {
+            pw.println("UPDATED");
+        }
+
+        System.out.println("\nЧтение изменения a.txt:");
+        System.out.println(cache.readFile("a.txt"));
+
+        cache.printCacheStats();
+
+        for (String name : testFiles) {
+            new File(name).delete();
+        }
+
+        System.out.println("Тест завершён.");
+    }
+}
